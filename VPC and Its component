@@ -1,0 +1,288 @@
+1. VPC (Virtual Private Cloud)
+📌 Concept
+
+AWS-managed isolated network environment where you launch AWS resources (EC2, RDS, etc.).
+
+Think of it as your own private data center inside AWS.
+
+🏗️ Architecture
+
+Each VPC is defined by a CIDR block (e.g., 10.0.0.0/16).
+
+A VPC can span multiple Availability Zones (AZs) in a region.
+
+Contains subnets, route tables, gateways, firewalls (SG/NACLs).
+
+💡 Use Case
+
+Separate VPCs for production, staging, and dev.
+
+Control network isolation (e.g., one VPC cannot talk to another without peering).
+
+🔧 Example
+
+Create VPC: 10.0.0.0/16 (65,536 IPs).
+
+Subdivide into multiple subnets: 10.0.1.0/24, 10.0.2.0/24.
+
+📝 Key Notes
+
+Default VPC exists in every region.
+
+You can create up to 5 VPCs per region (limit can be increased).
+
+2. CIDR (Classless Inter-Domain Routing)
+📌 Concept
+
+Defines the IP address range of your VPC or subnet.
+
+Format: IP/Prefix → e.g., 10.0.0.0/16.
+
+💡 Use Case
+
+Allows flexible allocation of IP ranges.
+
+Avoid overlapping CIDRs if planning VPC peering or hybrid cloud.
+
+🔧 Example
+
+10.0.0.0/16 → 65,536 IPs (good for VPC).
+
+10.0.1.0/24 → 256 IPs (good for a subnet).
+
+📝 Key Notes
+
+AWS reserves 5 IPs per subnet (first 4 and last 1).
+
+3. Subnet
+📌 Concept
+
+Logical partition of a VPC’s CIDR block.
+
+Each subnet is in one Availability Zone (AZ).
+
+🏗️ Types
+
+Public Subnet → Has a route to Internet Gateway (IGW).
+
+Private Subnet → No direct internet access, can use NAT.
+
+💡 Use Case
+
+Public subnet for web servers.
+
+Private subnet for databases, application servers.
+
+🔧 Example
+
+VPC: 10.0.0.0/16.
+
+Public Subnet (AZ-A): 10.0.1.0/24.
+
+Private Subnet (AZ-B): 10.0.2.0/24.
+
+4. Internet Gateway (IGW)
+📌 Concept
+
+Component that connects your VPC to the internet.
+
+Provides bidirectional traffic (inbound/outbound).
+
+💡 Use Case
+
+Allows EC2 instances with public IPs in public subnets to access the internet.
+
+🔧 Example
+
+Route Table: 0.0.0.0/0 → IGW.
+
+📝 Key Notes
+
+One IGW per VPC.
+
+Must be explicitly attached to VPC.
+
+5. NAT (Network Address Translation)
+📌 Concept
+
+Allows private subnet resources to access the internet outbound only.
+
+Prevents inbound internet connections.
+
+🏗️ Types
+
+NAT Gateway (AWS-managed, scalable, HA).
+
+NAT Instance (EC2-based, older approach).
+
+💡 Use Case
+
+Private EC2 instance downloading updates from the internet.
+
+🔧 Example
+
+Private EC2 → NAT Gateway (in Public Subnet) → IGW → Internet.
+
+📝 Key Notes
+
+NAT Gateway requires an Elastic IP.
+
+Chargeable by hour + data processed.
+
+6. Route Table
+📌 Concept
+
+A set of rules (routes) that decide where network traffic is directed.
+
+Each subnet must be associated with a route table.
+
+💡 Use Case
+
+Public Route Table → Routes traffic to IGW.
+
+Private Route Table → Routes traffic to NAT Gateway.
+
+🔧 Example
+
+Public Subnet RT:
+
+10.0.0.0/16 → local.
+
+0.0.0.0/0 → IGW.
+
+Private Subnet RT:
+
+10.0.0.0/16 → local.
+
+0.0.0.0/0 → NAT.
+
+7. Security Group (SG)
+📌 Concept
+
+Virtual firewall at the instance (ENI) level.
+
+Stateful → Return traffic automatically allowed.
+
+Only allow rules (no deny).
+
+💡 Use Case
+
+Restrict access to EC2 by IP, port, or protocol.
+
+🔧 Example
+
+Web Server SG:
+
+Inbound → Allow 80/443 from 0.0.0.0/0.
+
+Outbound → Allow all.
+
+8. Network ACL (NACL)
+📌 Concept
+
+Firewall at subnet level.
+
+Stateless → Return traffic must be explicitly allowed.
+
+Can allow or deny rules.
+
+💡 Use Case
+
+Extra layer of security (e.g., block malicious IP ranges).
+
+🔧 Example
+
+NACL Rules:
+
+Allow 80/TCP inbound.
+
+Deny 22/TCP inbound.
+
+9. Point-to-Point (P2P) Connections
+📌 Concept
+
+Direct private connectivity between two networks/VPCs.
+
+🏗️ Options
+
+VPC Peering → Connects two VPCs (same or cross-region).
+
+Direct Connect → Private dedicated line from on-premises → AWS.
+
+💡 Use Case
+
+Two VPCs in different accounts needing communication.
+
+10. Point-to-Site (P2S) Connections
+📌 Concept
+
+Used when individual clients (e.g., laptops) need secure AWS access.
+
+Typically implemented via Client VPN.
+
+💡 Use Case
+
+Developer securely connects to private EC2 without public IP.
+
+11. Load Balancer (ELB)
+📌 Concept
+
+Distributes incoming requests across multiple targets.
+
+Provides HA, scalability, fault tolerance.
+
+🏗️ Types
+
+ALB (Application Load Balancer)
+
+Layer 7 (HTTP/HTTPS).
+
+Path & host-based routing.
+
+Example: /api/* → ECS, /app/* → EC2.
+
+NLB (Network Load Balancer)
+
+Layer 4 (TCP/UDP).
+
+Handles millions of requests, low latency.
+
+CLB (Classic Load Balancer)
+
+Legacy, supports Layer 4 & 7.
+
+💡 Use Case
+
+ALB for microservices, NLB for high-throughput systems, CLB for legacy apps.
+
+end-to-end flow with Route Tables inline
+
+                ┌──────────────────────────────┐
+                │        AWS Region            │
+                │   (Virtual Private Cloud)    │
+                │  CIDR: 10.0.0.0/16           │
+                └──────────────────────────────┘
+                          │
+         ┌────────────────┴────────────────┐
+         │                                 │
+ ┌───────────────┐                 ┌───────────────┐
+ │ Public Subnet │ 10.0.1.0/24     │ Private Subnet│ 10.0.2.0/24
+ │   (AZ-A)      │                 │   (AZ-A)      │
+ └───────┬───────┘                 └───────┬───────┘
+         │                                 │
+  ┌──────▼─────┐                   ┌───────▼─────┐
+  │  EC2 (Web) │                   │  EC2 (DB)   │
+  │ Public IP  │                   │ Private IP  │
+  └──────┬─────┘                   └───────┬─────┘
+         │                                 │
+   ┌─────▼─────┐                     ┌─────▼─────┐
+   │   IGW     │                     │   NAT GW  │
+   │ Internet  │                     │ Outbound  │
+   └─────┬─────┘                     └─────┬─────┘
+         │                                 │
+ ┌───────▼────────┐                ┌───────▼────────┐
+ │ Public RT      │                │ Private RT     │
+ │----------------│                │----------------│
+ │ Local:10.0.0.0 │                │ Local:10.0.0.0 │
+ │ IGW: 0.0.0.0/0 │                │ NAT: 0.0.0.0/0 │
+ └────────────────┘                └────────────────┘
