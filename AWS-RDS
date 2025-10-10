@@ -1,0 +1,225 @@
+🟢 AWS RDS (Relational Database Service) 
+🔹 Definition
+
+Amazon RDS is a managed relational database service that automates common tasks such as:
+
+Database provisioning
+
+Patching
+
+Backup and recovery
+
+Monitoring
+
+Scaling (storage and compute)
+
+You can focus on application logic while AWS handles the infrastructure and maintenance.
+
+🔸 Supported Database Engines
+Engine	Description	Use Case
+Amazon Aurora	AWS-built MySQL/PostgreSQL compatible engine, high performance and fault-tolerant	Enterprise-grade apps
+MySQL	Open-source, popular web database	Web apps, CMS (WordPress, Joomla)
+PostgreSQL	Open-source, advanced features	GIS apps, analytics
+MariaDB	MySQL fork	High compatibility with MySQL
+Oracle	Enterprise-grade	Commercial apps
+SQL Server	Microsoft’s RDBMS	.NET-based applications
+🔹 Key Features
+Feature	Description
+Fully Managed	AWS automates backups, patching, failover, and scaling.
+High Availability	Multi-AZ deployment creates a synchronous standby replica in another Availability Zone.
+Read Scalability	Read Replicas help scale read-heavy workloads.
+Automated Backups	Daily automatic snapshots + transaction logs.
+Manual Snapshots	User-created snapshots for restore points.
+Security	Encryption (KMS), IAM authentication, VPC isolation, SSL connections.
+Monitoring	Amazon CloudWatch, Enhanced Monitoring, Performance Insights.
+Auto Scaling	Storage auto-scaling for increased demand.
+🔸 Architecture Overview
++------------------------------------------------------------+
+|                       AWS RDS Architecture                 |
++------------------------------------------------------------+
+| Application Layer --> Connects to RDS Endpoint             |
+|                                                            |
+| +-------------------------+     +-------------------------+ |
+| | Primary DB Instance     | <-- | Standby Instance (AZ2)  | |
+| | (Multi-AZ Deployment)   |     | (Synchronous Replication)| |
+| +-------------------------+     +-------------------------+ |
+|                                                            |
+| Read Replicas (Optional) in same or different region        |
+| Backup stored in S3                                         |
++------------------------------------------------------------+
+
+🔹 Core Components
+Component	Description
+DB Instance	The running database environment in the cloud. Each instance has an engine type and version.
+DB Parameter Group	Defines engine configuration parameters.
+DB Option Group	Enables optional features like Oracle Transparent Data Encryption or SQL Server Agent.
+Subnet Group	Defines which subnets (within VPC) RDS can use.
+Security Group	Controls inbound/outbound database access (like a firewall).
+Endpoint	Connection string (DNS name) to connect to the database. Example: database-1.xxxxxx.us-east-1.rds.amazonaws.com:3306
+🔸 Deployment Types
+Type	Description	Example
+Single-AZ	One database instance in one AZ.	Development, testing
+Multi-AZ	Primary + Standby in separate AZs. Automatic failover.	Production environments
+Read Replicas	Asynchronous copies for read scaling.	Analytics, reporting
+🔹 Storage Types
+Storage Type	Description	Performance
+General Purpose SSD (gp3/gp2)	Balanced cost and performance.	Up to 16,000 IOPS
+Provisioned IOPS (io1/io2)	High-performance workloads.	Up to 256,000 IOPS
+Magnetic (standard)	Legacy, low cost.	Basic performance
+🔸 Scaling in RDS
+Scaling Type	Description
+Vertical Scaling	Increase instance class (CPU, RAM).
+Storage Scaling	Auto increase storage as data grows.
+Read Scaling	Add read replicas for read-heavy apps.
+🔹 Backup and Recovery
+🧾 Automatic Backups
+
+Enabled by default.
+
+Retention period: 1–35 days.
+
+Stores daily snapshots and transaction logs in S3.
+
+Used for point-in-time recovery.
+
+📦 Manual Snapshots
+
+Created by user anytime.
+
+Retained until explicitly deleted.
+
+Used for manual restore or migration.
+
+🔄 Restore Options
+
+From latest automated backup.
+
+To a new DB instance using snapshot.
+
+Point-in-time restore (PITR).
+
+🔸 Security
+Mechanism	Description
+Network Isolation	RDS instances run in your VPC. Access controlled by security groups.
+Encryption at Rest	Enabled with AWS KMS. Encrypts storage, backups, snapshots, logs.
+Encryption in Transit	SSL/TLS connection between app and DB.
+IAM Authentication	IAM-based database login without storing passwords.
+Auditing	Database logs + AWS CloudTrail.
+🔹 Monitoring & Maintenance
+Tool	Purpose
+Amazon CloudWatch	Metrics like CPU, IOPS, latency, connections.
+Enhanced Monitoring	OS-level metrics every second.
+Performance Insights	Database query performance dashboard.
+RDS Events	Notifications for maintenance, failover, backups.
+RDS Logs	Error logs, slow query logs (for MySQL/Postgres).
+🔸 Maintenance Activities
+
+Automatic Minor Version Updates
+
+Patching Windows
+
+Maintenance Window: You can define when AWS applies updates.
+
+🔹 Connectivity
+Step	Description
+1	Create a DB instance.
+2	Note endpoint and port.
+3	Configure VPC Security Group to allow inbound DB port (e.g., 3306 for MySQL).
+4	Connect via client or SDK.
+5	(Optional) Connect via EC2 in same VPC if RDS is private.
+
+Example Connection String (MySQL):
+
+mysql -h database-1.xxxxxx.us-east-1.rds.amazonaws.com -u admin -p
+
+🔸 High Availability & Failover
+Multi-AZ Deployment:
+
+Primary DB instance in one AZ.
+
+Synchronous replication to standby in another AZ.
+
+Automatic failover during:
+
+Instance failure
+
+Storage failure
+
+AZ outage
+
+Manual reboot with failover
+
+Failover time: ~60–120 seconds.
+
+🔹 Read Replicas
+
+Asynchronous replication from primary.
+
+Can promote read replica to standalone DB.
+
+Cross-region replication supported.
+
+Use Case: Offloading reporting queries or analytics.
+
+🔸 Pricing Components
+Component	Description
+Instance hours	Billed per second/hour based on instance class.
+Storage	Charged per GB-month.
+IO requests	For Provisioned IOPS.
+Backups	Free up to total DB size; charged for additional.
+Data Transfer	Outbound data charges apply.
+🔹 RDS vs Other AWS Databases
+Feature	RDS	Aurora	DynamoDB
+Type	Relational	Relational (AWS-optimized)	NoSQL
+Scaling	Manual / Read replicas	Auto	Auto
+Performance	Standard	5x faster	Key-value optimized
+Use Case	Legacy apps	Enterprise-grade	IoT, serverless apps
+🔸 Common Commands / AWS CLI
+# List all DB instances
+aws rds describe-db-instances
+
+# Create a new DB instance
+aws rds create-db-instance \
+  --db-instance-identifier mydb \
+  --engine mysql \
+  --allocated-storage 20 \
+  --db-instance-class db.t3.micro \
+  --master-username admin \
+  --master-user-password MyPass123 \
+  --backup-retention-period 7
+
+# Delete DB instance
+aws rds delete-db-instance --db-instance-identifier mydb --skip-final-snapshot
+
+🔹 Best Practices
+
+✅ Enable Multi-AZ for production.
+✅ Use IAM authentication instead of hard-coded passwords.
+✅ Enable encryption for storage and backups.
+✅ Monitor via Performance Insights.
+✅ Configure maintenance windows during low traffic.
+✅ Use parameter groups for performance tuning.
+✅ Take manual snapshots before major changes.
+✅ Restrict access with VPC Security Groups.
+
+🔸 Common Interview Questions
+
+What is the difference between RDS and Aurora?
+
+How does Multi-AZ differ from Read Replica?
+
+What happens during RDS failover?
+
+How can you scale an RDS instance?
+
+How to encrypt an existing unencrypted RDS instance?
+
+What is the maximum backup retention period?
+
+What metrics can you monitor using CloudWatch?
+
+What are parameter groups and option groups?
+
+What is the difference between endpoint and connection string?
+
+Can you stop and start an RDS instance? (✅ Yes, except Aurora clusters)
