@@ -1,0 +1,249 @@
+🟢 AWS Lambda – Detailed Notes
+🔹 Definition
+
+AWS Lambda is a serverless compute service that lets you run code without provisioning or managing servers.
+You simply upload your code, configure triggers, and Lambda automatically runs your function in response to events.
+
+👉 You pay only for compute time consumed — there’s no charge when the function is idle.
+
+🔸 Key Concepts
+Term	Description
+Function	A single piece of code deployed to Lambda.
+Event	The input that triggers the Lambda function (e.g., S3 upload, API Gateway request).
+Trigger	AWS service or custom event that invokes the function.
+Handler	The method in your code that AWS Lambda calls to start execution.
+Execution Role	IAM role granting the function permission to access AWS resources.
+Runtime	Language environment such as Python, Node.js, Java, Go, C#, or custom.
+Environment Variables	Configuration values available to your function at runtime.
+🔹 Supported Languages (Runtimes)
+Runtime	Example File	Typical Use Case
+Node.js	index.js	Webhooks, APIs
+Python	lambda_function.py	Data processing, ML tasks
+Java	Handler.java	Enterprise applications
+Go	main.go	High-performance apps
+C#/.NET	Function.cs	Microsoft workloads
+Ruby	lambda.rb	Custom scripting
+Custom Runtime	bootstrap	Any language you define
+🔸 AWS Lambda Architecture Overview
++------------------------------------------------------+
+|                 AWS Lambda Architecture              |
++------------------------------------------------------+
+|  Event Sources (Triggers)                            |
+|   → S3, DynamoDB, API Gateway, SNS, EventBridge, etc.|
+|                                                      |
+|  --> Lambda Function                                 |
+|      - Code Package                                  |
+|      - Handler                                       |
+|      - Environment Variables                         |
+|      - Execution Role (IAM)                          |
+|                                                      |
+|  --> Lambda Runtime (Python, Node.js, etc.)          |
+|                                                      |
+|  --> AWS Services Access (S3, DynamoDB, RDS, etc.)   |
+|                                                      |
+|  --> Logs (CloudWatch Logs)                          |
++------------------------------------------------------+
+
+🔹 How AWS Lambda Works
+
+Trigger Event Occurs (e.g., S3 object upload).
+
+Lambda Service Detects Event → invokes the function.
+
+Function Code Executes inside a managed runtime environment.
+
+Logs & Metrics sent automatically to CloudWatch.
+
+Environment Reused for future invocations (container warm start).
+
+🔸 Function Configuration Parameters
+Parameter	Description
+Function Name	Unique name for your Lambda.
+Runtime	Programming language environment.
+Handler	Entry point of your function (e.g., index.handler).
+Timeout	Max time (1 sec to 15 min) function can run.
+Memory (128 MB – 10,240 MB)	Determines compute power and cost.
+Ephemeral Storage (512 MB – 10 GB)	Temporary /tmp storage for function execution.
+Environment Variables	Key-value pairs for config.
+Execution Role (IAM Role)	Grants permissions to access AWS resources.
+Layers	Packages or dependencies shared across functions.
+🔹 Triggers (Event Sources)
+Service	Event Example
+S3	File uploaded to a bucket triggers Lambda.
+DynamoDB Streams	Table update event triggers Lambda.
+API Gateway	HTTP request invokes Lambda.
+SNS / SQS	Message published triggers Lambda.
+CloudWatch Events / EventBridge	Scheduled or custom events.
+Step Functions	Orchestrates Lambda steps in workflows.
+Kinesis Streams	Real-time data stream triggers Lambda.
+Cognito	User pool event triggers Lambda (signup, login).
+🔸 Execution Environment
+
+Lambda runs your function inside an isolated runtime environment (container).
+Each container includes:
+
+Runtime (Node.js, Python, etc.)
+
+Function code
+
+Configuration
+
+/tmp storage
+
+Network interface (in VPC or public)
+
+👉 Lambda may reuse containers (warm start) to improve performance.
+
+🔹 Scaling
+Type	Description
+Automatic Scaling	Lambda automatically scales based on incoming requests.
+Concurrency	Number of simultaneous executions.
+Reserved Concurrency	Guaranteed number of concurrent instances.
+Provisioned Concurrency	Keeps pre-warmed containers ready to avoid cold starts.
+
+Formula:
+Each event = 1 invocation = 1 concurrent execution.
+
+🔸 Cold Start vs Warm Start
+Type	Description
+Cold Start	New container is created → slightly higher latency.
+Warm Start	Existing container reused → faster execution.
+
+✅ Use Provisioned Concurrency or frequent invocations to reduce cold starts.
+
+🔹 Monitoring & Logging
+Tool	Description
+Amazon CloudWatch Logs	Captures stdout/stderr logs from Lambda.
+CloudWatch Metrics	Invocations, errors, throttles, duration, etc.
+X-Ray	Traces requests and analyzes performance bottlenecks.
+
+Common Metrics:
+
+Invocations
+
+Duration
+
+Errors
+
+Throttles
+
+IteratorAge (for stream-based invocations)
+
+🔸 Security
+Feature	Description
+IAM Role (Execution Role)	Grants permission for Lambda to access AWS resources.
+Resource Policy	Allows or restricts specific accounts/services to invoke Lambda.
+VPC Access	Lambda can connect to private subnets or RDS instances within VPC.
+Environment Variable Encryption	Securely store sensitive data.
+AWS KMS Integration	Encrypt secrets used in Lambda.
+🔹 Versions, Aliases, and Layers
+Concept	Description
+Version	Immutable snapshot of a Lambda function.
+Alias	Named pointer to a version (e.g., “dev”, “prod”).
+Layer	ZIP package that contains libraries or shared code (reusable across Lambdas).
+🔸 Timeouts and Retries
+Event Type	Retry Behavior
+Synchronous (e.g., API Gateway)	Returns error directly, no retries.
+Asynchronous (e.g., S3, SNS)	Automatically retries twice with delay.
+Stream-based (Kinesis, DynamoDB)	Retries until success or record expires.
+🔹 Pricing
+Component	Description
+Free Tier	1M requests + 400,000 GB-seconds per month.
+Request Charges	$0.20 per 1 million requests.
+Compute Charges	Based on execution time × memory (GB-seconds).
+Provisioned Concurrency	Additional charge for keeping environments pre-warmed.
+Data Transfer	Outbound data transfer applies.
+🔸 Common AWS CLI Commands
+# List all Lambda functions
+aws lambda list-functions
+
+# Create a Lambda function
+aws lambda create-function \
+  --function-name myFunction \
+  --runtime python3.12 \
+  --role arn:aws:iam::123456789012:role/lambda-exec-role \
+  --handler lambda_function.lambda_handler \
+  --zip-file fileb://function.zip
+
+# Update function code
+aws lambda update-function-code \
+  --function-name myFunction \
+  --zip-file fileb://function.zip
+
+# Invoke function
+aws lambda invoke \
+  --function-name myFunction \
+  output.txt
+
+# Delete function
+aws lambda delete-function --function-name myFunction
+
+🔹 Best Practices
+
+✅ Keep function lightweight and small in size.
+✅ Use environment variables for configurations.
+✅ Separate business logic and handler code.
+✅ Implement error handling and retries properly.
+✅ Use provisioned concurrency for latency-sensitive workloads.
+✅ Leverage CloudWatch logs and metrics for performance tuning.
+✅ Avoid long-running functions; use Step Functions for orchestration.
+✅ Reuse SDK clients and database connections across invocations.
+✅ Encrypt sensitive information with KMS.
+
+🔸 Common Use Cases
+Category	Example
+Web Apps	Backend for serverless APIs using API Gateway.
+Data Processing	Transform files uploaded to S3.
+Automation	Triggered by CloudWatch Events for scheduled tasks.
+IoT	Process messages from IoT Core.
+AI/ML	Run lightweight inference models.
+Chatbots	Process events from Lex or Connect.
+🔹 Integration with Other AWS Services
+Service	Purpose
+S3	Trigger Lambda on file upload/delete.
+API Gateway	Create RESTful APIs backed by Lambda.
+DynamoDB	Trigger Lambda on table changes.
+SNS / SQS	Process messages asynchronously.
+EventBridge	Orchestrate scheduled or custom events.
+Step Functions	Workflow orchestration using multiple Lambdas.
+RDS Proxy	Connect to RDS databases efficiently.
+🔸 Common Interview Questions
+
+What is AWS Lambda and how does it work?
+
+What is the difference between synchronous and asynchronous invocation?
+
+Explain cold start and how to reduce it.
+
+What are Layers and Aliases in Lambda?
+
+How does Lambda scale automatically?
+
+How do you secure Lambda functions?
+
+How is billing calculated in Lambda?
+
+What is the maximum timeout and memory limit?
+
+How can Lambda connect to an RDS database?
+
+What are Provisioned vs Reserved concurrency?
+
+🔹 Comparison: Lambda vs EC2 vs Fargate
+Feature	Lambda	EC2	Fargate
+Server Management	Fully managed	Manual	Managed
+Pricing	Pay per request/time	Pay per hour	Pay per vCPU-second
+Scaling	Automatic	Manual / Auto Scaling group	Automatic
+Use Case	Short, event-driven tasks	Long-running apps	Containers
+Runtime Control	Limited	Full control	Full control
+🔸 Real-World Example
+
+📦 S3 File Processing
+
+File uploaded to S3 bucket.
+
+S3 event triggers Lambda.
+
+Lambda reads file → processes data → stores result in DynamoDB.
+
+Sends completion message via SNS.
