@@ -1,0 +1,93 @@
+What is IAM?
+
+IAM (Identity and Access Management) is an AWS service that helps you securely control access to AWS resources.
+It enables you to define who can access what, and what actions they can perform on AWS services and resources.
+
+In simple terms:
+
+IAM = Authentication (who you are) + Authorization (what you can do)
+
+⚙️ Key Components of IAM
+Component	Description	Example
+User	Represents an individual or service that interacts with AWS. Each user has their own credentials (username, password, access keys).	Example: john_admin or developer_bot
+Group	A collection of IAM users. You attach policies to groups to manage permissions collectively.	Example: Developers, Admins, Testers
+Role	A temporary identity with specific permissions. Used by AWS services, users, or applications to perform actions without using long-term credentials.	Example: EC2AccessRole, LambdaExecutionRole
+Policy	A JSON document that defines permissions — actions allowed or denied. Policies are attached to users, groups, or roles.	Example: Allowing s3:PutObject on a specific bucket
+Access Keys	Used for programmatic access to AWS (CLI, SDK). Consists of an Access Key ID and a Secret Access Key.	Example: Developers accessing AWS via code
+IAM Identity Center (AWS SSO)	A service for centralized access management across multiple AWS accounts and applications.	Example: Managing user access across multiple AWS accounts
+Permission Boundary	A limit or upper boundary that defines maximum permissions an IAM user or role can have.	Example: Ensures no user can escalate privileges beyond a defined limit
+🔒 IAM Policy – In Detail
+
+A policy is a set of permissions written in JSON.
+
+Policies define what actions are allowed or denied on specific resources.
+
+✅ Example: Allow EC2 Start/Stop
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:StartInstances",
+        "ec2:StopInstances"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+
+🧠 Types of Policies:
+Type	Description	Example
+AWS Managed Policy	Created and maintained by AWS.	AmazonS3FullAccess
+Customer Managed Policy	Created by you for custom permissions.	MyEC2StartStopPolicy
+Inline Policy	Embedded directly inside a user, group, or role.	A specific policy for one IAM user
+👤 IAM Role – In Detail
+
+A role is not associated with a specific user.
+
+Instead, it’s assumed by users, applications, or AWS services when needed.
+
+Roles use temporary credentials (through STS - Security Token Service).
+
+✅ Example Use Cases:
+Scenario	Role Example	Purpose
+EC2 Instance Accessing S3	EC2S3AccessRole	Allows EC2 instances to access S3 buckets
+Lambda Function Writing to CloudWatch Logs	LambdaExecutionRole	Enables Lambda to write logs
+Cross-Account Access	CrossAccountRole	Allows access between AWS accounts
+Federated User Login	SAMLRole	Temporary access for external users via SSO or AD
+🧩 Example Role Trust Policy (Who can assume it)
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Service": "ec2.amazonaws.com" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+
+⚖️ Difference Between Policy and Role
+Feature	IAM Policy	IAM Role
+Purpose	Defines permissions (what actions are allowed or denied).	Defines who can assume it and what permissions it provides.
+Attachment	Attached to users, groups, or roles.	Can have one or more policies attached.
+Contains	JSON document describing actions, resources, and conditions.	Permissions + Trust policy specifying who can assume the role.
+Authentication	Used by a specific identity (user/group/role).	Provides temporary credentials via STS.
+Example Use Case	Allow a user to read/write S3 bucket.	Allow EC2 instance to access S3 bucket.
+Lifespan	Permanent (until deleted).	Temporary (valid until session expires).
+🔐 IAM Best Practices
+
+Use least privilege principle – Grant only necessary permissions.
+
+Use roles instead of access keys for applications running on AWS.
+
+Enable MFA (Multi-Factor Authentication) for users.
+
+Rotate access keys regularly.
+
+Use IAM Access Analyzer to review unused permissions.
+
+Avoid root account for daily operations.
+
+Organize users in groups and manage permissions through groups.
