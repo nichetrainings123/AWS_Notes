@@ -1,0 +1,68 @@
+🧠 AWS Load Balancer Notes
+🔹 Definition
+
+A Load Balancer (LB) in AWS automatically distributes incoming application traffic across multiple targets (EC2 instances, containers, IPs, Lambda functions) in one or more Availability Zones.
+It increases availability, fault tolerance, and scalability.
+
+⚙️ Types of AWS Load Balancers (Under Elastic Load Balancing - ELB)
+Type	Purpose	Layer	Protocol Support	Target Types	Routing Logic	Scope	Pricing Model
+1. Application Load Balancer (ALB)	Used for HTTP/HTTPS (web traffic). Ideal for microservices, containers.	Layer 7 (Application Layer)	HTTP, HTTPS, gRPC	Instance, IP, Lambda	Content-based routing (Host, Path, Header, Query)	Regional	Charged per LCU (Load Balancer Capacity Unit) + hours
+2. Network Load Balancer (NLB)	Used for high-performance, low-latency TCP/UDP traffic.	Layer 4 (Transport Layer)	TCP, UDP, TLS	Instance, IP, ALB	Connection-based routing	Regional	Charged per NLCU (Network Load Balancer Capacity Unit) + hours
+3. Gateway Load Balancer (GWLB)	Used for deploying, scaling, and managing third-party network appliances (firewalls, IDS/IPS).	Layer 3 (Network Layer)	IP (GENEVE protocol)	Appliance Targets (Virtual Appliances)	Routes via GENEVE encapsulation	Regional	Charged per Gateway LCU + data processing
+4. Classic Load Balancer (CLB)	Legacy load balancer supporting both Layer 4 and Layer 7.	Layer 4 & 7	HTTP, HTTPS, TCP, SSL	Instance	Basic routing	Regional	Charged per hour + data processed
+🧩 Key Differences Summary
+Feature	ALB	NLB	GWLB	CLB
+Layer	7 (Application)	4 (Transport)	3 (Network)	4 & 7
+Use Case	Web traffic, microservices	TCP/UDP, real-time apps	Security appliances	Legacy applications
+Routing	Content-based (Path/Host)	Connection-based	Packet-based	Basic
+Protocol	HTTP, HTTPS	TCP, UDP, TLS	IP (GENEVE)	HTTP, TCP
+Health Checks	HTTP/HTTPS	TCP/HTTP/HTTPS	GENEVE	TCP/HTTP
+Targets	EC2, IP, Lambda	EC2, IP, ALB	Virtual Appliances	EC2 only
+Performance	Moderate	Ultra-high	Depends on appliances	Moderate
+Cross-Zone Load Balancing	Optional	Optional	Not Supported	Enabled
+Pricing	Per LCU-hour	Per NLCU-hour	Per GLBU-hour	Per hour
+Modern Usage	✅ Recommended	✅ Recommended	✅ Specialized	❌ Deprecated
+💡 Use Case Examples
+Scenario	Recommended LB	Reason
+Web app using HTTP/HTTPS	ALB	Layer 7 intelligent routing
+Real-time gaming or chat apps	NLB	Handles TCP/UDP high performance
+Network firewall or IDS integration	GWLB	Integrates virtual appliances
+Old legacy EC2 apps	CLB	For backward compatibility
+🌍 Scope (Regional vs Global)
+Load Balancer Type	Scope
+Application Load Balancer	Regional
+Network Load Balancer	Regional
+Gateway Load Balancer	Regional
+Classic Load Balancer	Regional
+Global Accelerator (not LB but often confused)	Global (uses anycast for global routing)
+💰 Pricing Overview (Simplified)
+Load Balancer	Pricing Metric	Typical Cost Structure
+ALB	per hour + per LCU-hour	~$0.0225/hr + LCU usage
+NLB	per hour + per NLCU-hour	~$0.0225/hr + NLCU usage
+GWLB	per hour + per GLBU-hour + data	~$0.025/hr + processing
+CLB	per hour + data processed	~$0.025/hr + $0.008/GB
+🧱 Important Components
+
+Listeners → Define how LB receives traffic (port/protocol).
+
+Target Groups → Group of registered targets (EC2, IP, Lambda).
+
+Rules → Conditions for routing (path, host, header, etc.).
+
+Health Checks → Periodic checks to ensure target availability.
+
+Security Groups → Control inbound/outbound traffic.
+
+🧰 Example: ALB Setup Steps
+
+Create or choose a VPC and subnets (at least 2 AZs).
+
+Create Target Groups (EC2 or Lambda).
+
+Configure Listeners and Rules (HTTP/HTTPS).
+
+Add Security Group for LB.
+
+Review and Launch the ALB.
+
+Test with DNS name assigned by AWS.
