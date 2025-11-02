@@ -1,0 +1,213 @@
+AWS Application Load Balancer (ALB) — Detailed Notes
+🔹 1. What is an Application Load Balancer (ALB)?
+
+Application Load Balancer (ALB) is part of Elastic Load Balancing (ELB) in AWS.
+It operates at Layer 7 (Application Layer) of the OSI model and intelligently routes traffic based on HTTP(S) request content — like Host, Path, Query String, Header, or HTTP method.
+
+It is ideal for microservices, containerized apps (ECS, EKS), and serverless (Lambda) architectures.
+
+🔹 2. Key Features of ALB
+Feature	Description
+Layer 7 Routing	Routes based on content such as URL path, hostname, or header.
+Host-based Routing	Route api.example.com and app.example.com to different targets.
+Path-based Routing	Route /images to one target group, /api to another.
+HTTPS (SSL/TLS)	Supports SSL termination using AWS Certificate Manager (ACM).
+WebSocket Support	Supports long-lived WebSocket connections.
+Redirects & Fixed Responses	Can automatically redirect (HTTP→HTTPS) or send fixed responses.
+Integration with ECS	Automatically registers containers as targets.
+Native IPv6 Support	Dual-stack support for IPv4 and IPv6.
+Target Types	EC2 instances, IP addresses, Lambda functions.
+🔹 3. ALB Architecture
+         ┌───────────────────────────────────┐
+         │         Clients (Users)           │
+         └───────────────────────────────────┘
+                          │
+                 (HTTP/HTTPS Traffic)
+                          │
+              ┌─────────────────────────┐
+              │  Application Load Balancer│
+              └─────────────────────────┘
+             ┌────────────┴────────────┐
+             │                         │
+   Target Group 1                Target Group 2
+ (e.g., /api requests)       (e.g., /images requests)
+     │   │   │                     │   │   │
+   EC2 EC2 EC2                  EC2 EC2 EC2
+
+🔹 4. ALB Components
+Component	Description
+Listeners	Port and protocol (e.g., HTTP:80, HTTPS:443) that ALB listens on.
+Target Groups	A collection of registered targets (EC2, IP, Lambda).
+Rules	Define how to route traffic based on request fields.
+Health Checks	ALB checks each target's health periodically to route only to healthy ones.
+Security Groups	Control inbound/outbound traffic to ALB.
+Availability Zones	ALB must be deployed in at least 2 subnets (AZs) for high availability.
+🔹 5. ALB Use Cases
+Use Case	Example
+Microservices Architecture	Each service has a separate target group (/auth, /users, /orders)
+Web Application with Static & Dynamic Content	/images → S3/static server, /api → EC2/ECS
+SSL Termination	Offload HTTPS traffic to ALB to reduce instance CPU load
+Multi-Environment Routing	Route traffic to Blue/Green deployments during CI/CD
+🔹 6. ALB Setup from Scratch (AWS Console)
+✅ Pre-requisites
+
+An AWS VPC with at least two public subnets in different Availability Zones.
+
+EC2 instances (e.g., web servers) with a web server (Apache/Nginx) running on port 80.
+
+Proper Security Groups to allow HTTP/HTTPS.
+
+🚀 Step-by-Step Setup
+Step 1: Launch EC2 Instances
+
+Go to EC2 → Instances → Launch Instances
+
+Choose Amazon Linux 2 or Ubuntu AMI.
+
+Configure:
+
+Network: Select existing VPC.
+
+Subnets: Choose at least 2 AZs.
+
+Security Group: Allow port 80 (HTTP) and 22 (SSH).
+
+Add user data (optional) to install a web server automatically:
+
+#!/bin/bash
+yum install -y httpd
+systemctl start httpd
+systemctl enable httpd
+echo "<h1>Hello from $(hostname -f)</h1>" > /var/www/html/index.html
+
+
+Launch instances.
+
+Step 2: Create Target Group
+
+Go to EC2 → Target Groups → Create target group
+
+Choose Target type = Instances
+
+Protocol = HTTP, Port = 80
+
+Health check path = /
+
+Select your VPC.
+
+Register both EC2 instances.
+
+Click Create Target Group.
+
+Step 3: Create Application Load Balancer
+
+Go to EC2 → Load Balancers → Create Load Balancer
+
+Select Application Load Balancer.
+
+Name = my-app-alb
+
+Scheme = Internet-facing
+
+IP Type = IPv4
+
+Listeners = Add HTTP on port 80 (HTTPS optional).
+
+Select at least two subnets across different AZs.
+
+Security Group = Allow inbound HTTP (80) and HTTPS (443).
+
+Choose Default target group created in Step 2.
+
+Click Create Load Balancer.
+
+Step 4: Add Listener Rules (Optional)
+
+You can add rules like:
+
+/api/* → Target group A
+
+/app/* → Target group B
+
+In Listeners → Rules → Add rule → Add condition → Path pattern.
+
+Step 5: Test ALB
+
+Go to Load Balancers → my-app-alb
+
+Copy the DNS name (e.g., my-app-alb-123456789.us-east-1.elb.amazonaws.com)
+
+Open in a browser → It should display:
+
+Hello from ip-172-31-xx-xx
+
+
+(the message from your EC2’s hostname)
+
+🔹 7. ALB Setup Using AWS CLI
+# 1. Create target group
+aws elbv2 create-target-group \
+  --name my-targets \
+  --protocol HTTP \
+  --port 80 \
+  --vpc-id vpc-123abc45 \
+  --health-check-protocol HTTP \
+  --health-check-path / \
+  --target-type instance
+
+# 2. Register targets (your EC2 instance IDs)
+aws elbv2 register-targets \
+  --target-group-arn arn:aws:elasticloadbalancing:region:acct-id:targetgroup/my-targets/abc123 \
+  --targets Id=i-0123456789abcdef0 Id=i-0fedcba9876543210
+
+# 3. Create ALB
+aws elbv2 create-load-balancer \
+  --name my-app-alb \
+  --subnets subnet-abc123 subnet-def456 \
+  --security-groups sg-0011223344 \
+  --scheme internet-facing \
+  --type application \
+  --ip-address-type ipv4
+
+# 4. Create listener
+aws elbv2 create-listener \
+  --load-balancer-arn arn:aws:elasticloadbalancing:region:acct-id:loadbalancer/app/my-app-alb/123456789 \
+  --protocol HTTP \
+  --port 80 \
+  --default-actions Type=forward,TargetGroupArn=arn:aws:elasticloadbalancing:region:acct-id:targetgroup/my-targets/abc123
+
+🔹 8. ALB Health Checks
+Parameter	Purpose
+Protocol & Path	Defines how the LB checks targets (HTTP /health)
+Healthy threshold	# of consecutive successes for healthy status
+Unhealthy threshold	# of consecutive failures for unhealthy status
+Timeout & Interval	Time between and duration of health checks
+🔹 9. ALB Monitoring & Logging
+
+CloudWatch Metrics: RequestCount, TargetResponseTime, HealthyHostCount
+
+Access Logs: Detailed logs for each request stored in S3
+
+AWS WAF Integration: Add Web Application Firewall rules to block malicious traffic.
+
+🔹 10. Common Troubleshooting
+Issue	Possible Cause	Fix
+“502 Bad Gateway”	Target group not healthy	Check target health check path
+ALB not accessible	Security group missing inbound rule	Allow port 80/443
+Health check failing	Web server not running	Restart HTTP service
+DNS name not resolving	ALB creation not complete	Wait for provisioning
+🔹 11. ALB Pricing Summary
+Component	Cost Type
+Load Balancer usage	per hour
+Processed data	per GB
+LCUs (Load Balancer Capacity Units)	Based on: new connections/sec, active connections, processed bytes, rule evaluations
+
+Example:
+💰 ALB cost ≈ $0.0225/hour + LCU usage
+
+✅ Final Outcome
+
+✔️ Load Balancer DNS → Routes to multiple EC2 instances
+✔️ Automatic health checks and failover
+✔️ High availability and fault tolerance
+✔️ Smart routing for modern web applications
